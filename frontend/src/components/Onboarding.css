@@ -1,0 +1,84 @@
+.onboarding {
+  box-sizing: border-box;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.onboarding--loading {
+  align-items: center;
+  text-align: center;
+}
+
+.onboarding__progress {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: var(--text);
+  opacity: 0.75;
+}
+
+.onboarding__question {
+  margin: 0 0 1.25rem;
+  font-family: var(--heading);
+  font-size: 1.5rem;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  color: var(--text-h);
+}
+
+.onboarding__input {
+  box-sizing: border-box;
+  width: 100%;
+  margin-bottom: 1rem;
+  padding: 0.875rem 1rem;
+  font: inherit;
+  line-height: 1.45;
+  color: var(--text-h);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  resize: vertical;
+}
+
+.onboarding__input:focus {
+  outline: 2px solid var(--accent-border);
+  outline-offset: 1px;
+}
+
+.onboarding__button {
+  align-self: flex-start;
+  padding: 0.625rem 1.25rem;
+  font: inherit;
+  font-weight: 500;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.onboarding__button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.onboarding__button:not(:disabled):hover {
+  filter: brightness(1.08);
+}
+
+.onboarding__error {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  color: #c53030;
+}
+
+.onboarding__status {
+  margin: 0;
+  font-family: var(--heading);
+  font-size: 1.25rem;
+  color: var(--text-h);
+}
