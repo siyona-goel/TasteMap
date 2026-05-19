@@ -2,9 +2,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from embeddings import embed
+from embeddings import embed, embed_batch
 from llm import extract_profile
 from overpass import fetch_places, tags_to_text
+from scoring import score_places
 
 app = FastAPI()
 
@@ -18,6 +19,45 @@ app.add_middleware(
 
 class ProfileRequest(BaseModel):
     text: str
+
+
+class ScoreRequest(BaseModel):
+    lat: float
+    lon: float
+    radius: int = 3000
+    user_embedding: list[float]
+
+
+@app.post("/score")
+def score_city(req: ScoreRequest):
+    raw_places = fetch_places(req.lat, req.lon, req.radius)
+    places = [
+        {
+            "id": p["id"],
+            "lat": p["lat"],
+            "lon": p["lon"],
+            "name": p["tags"].get("name"),
+            "tags": p["tags"],
+            "description": tags_to_text(p["tags"]),
+        }
+        for p in raw_places
+        if "lat" in p and "lon" in p
+    ]
+
+    if not places:
+        return []
+
+    descriptions = [p["description"] for p in places]
+    embeddings = embed_batch(descriptions)
+    for place, emb in zip(places, embeddings):
+        place["embedding"] = emb
+
+    scored = score_places(req.user_embedding, places)
+
+    for place in scored:
+        del place["embedding"]
+
+    return scored
 
 
 @app.post("/profile")

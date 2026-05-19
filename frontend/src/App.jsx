@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import Map from './components/Map'
 import axios from 'axios'
-//import Onboarding from './components/Onboarding'
+// import Onboarding from './components/Onboarding'
 
 const API = import.meta.env.VITE_API_URL
 //const PREVIEW_ONBOARDING = true
@@ -22,3 +22,16 @@ export default function App() {
 
   return <Map places={places} />
 }
+
+// import { useState } from 'react'
+// import Onboarding from './components/Onboarding'
+
+// export default function App() {
+//   return (
+//     <Onboarding
+//       onComplete={(data) => {
+//         console.log("PROFILE RESPONSE:", data)
+//       }}
+//     />
+//   )
+// }
