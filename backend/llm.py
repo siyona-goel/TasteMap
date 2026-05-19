@@ -1,14 +1,21 @@
+import hashlib
 import json
 import os
 import re
+from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
+
+from overpass import tags_to_text
 
 load_dotenv()
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+
+DESCRIPTIONS_CACHE_DIR = Path(__file__).resolve().parent / "cache" / "descriptions"
+ENRICH_MIN_WORDS = 20
 
 PROFILE_PROMPT = """
 You are helping build a personal taste profile for a travel/exploration app.
@@ -79,6 +86,43 @@ def extract_profile(answers_text: str) -> dict:
     prompt = PROFILE_PROMPT.format(answers=answers_text)
     raw = _chat(prompt, json_mode=True)
     return _parse_json(raw)
+
+
+def enrich_place_description(tags: dict, place_id: int | None = None) -> str:
+    """
+    Takes sparse OSM tags and returns a rich natural language description.
+    Only call this if tags_to_text() produces fewer than 20 words — otherwise
+    this returns tags_to_text(tags) without calling the LLM.
+
+    Results are cached under cache/descriptions/{place_id}.txt when place_id
+    is set (OSM element id); otherwise a hash of the tags is used as the filename.
+    """
+    sparse = len(tags_to_text(tags).split()) < ENRICH_MIN_WORDS
+    if not sparse:
+        return tags_to_text(tags)
+
+    cache_key = str(place_id) if place_id is not None else hashlib.md5(
+        json.dumps(sorted(tags.items()), sort_keys=True).encode()
+    ).hexdigest()
+    cache_path = DESCRIPTIONS_CACHE_DIR / f"{cache_key}.txt"
+
+    if cache_path.exists():
+        return cache_path.read_text(encoding="utf-8").strip()
+
+    tags_str = ", ".join(f"{k}={v}" for k, v in sorted(tags.items()))
+    prompt = f"""
+These are OpenStreetMap tags for a place: {tags_str}
+
+Write 2-3 sentences describing the vibe, atmosphere, and type of
+person who would enjoy this place. Be specific and evocative.
+Return only the description, no preamble.
+""".strip()
+    text = _chat(prompt, max_tokens=100)
+
+    DESCRIPTIONS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(text, encoding="utf-8")
+
+    return text
 
 
 def generate_match_reason(profile_summary: str, place_description: str) -> str:
