@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from embeddings import embed, embed_batch
-from llm import extract_profile
+from llm import extract_profile, generate_match_reason
 from overpass import fetch_places, tags_to_text
 from scoring import score_places
 
@@ -26,6 +26,20 @@ class ScoreRequest(BaseModel):
     lon: float
     radius: int = 3000
     user_embedding: list[float]
+
+
+class ReasonRequest(BaseModel):
+    place_description: str
+    profile_summary: str
+
+
+@app.post("/reason")
+def get_reason(req: ReasonRequest):
+    try:
+        reason = generate_match_reason(req.profile_summary, req.place_description)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {"reason": reason}
 
 
 @app.post("/score")
