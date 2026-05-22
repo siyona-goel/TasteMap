@@ -1,3 +1,6 @@
+import json
+import logging
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -6,6 +9,9 @@ from embeddings import embed, embed_batch
 from llm import extract_profile, generate_match_reason
 from overpass import fetch_places, tags_to_text
 from scoring import score_places
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -79,7 +85,8 @@ def create_profile(req: ProfileRequest):
     try:
         profile = extract_profile(req.text)
         profile_embedding = embed(profile["summary"])
-    except (KeyError, RuntimeError, ValueError) as exc:
+    except (KeyError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        logger.exception("Profile creation failed")
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     return {
         "profile": profile,

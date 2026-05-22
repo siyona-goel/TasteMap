@@ -4,9 +4,9 @@ import axios from 'axios'
 import 'leaflet/dist/leaflet.css'
 
 function scoreToStyle(score) {
-  if (score >= 0.65) return { color: '#E8593C', radius: 10, opacity: 0.85 }
-  if (score >= 0.50) return { color: '#EF9F27', radius: 7, opacity: 0.7 }
-  if (score >= 0.40) return { color: '#888888', radius: 5, opacity: 0.5 }
+  if (score >= 0.65) return { color: '#E8593C', radius: 10, opacity: 0.99 }
+  if (score >= 0.50) return { color: '#EF9F27', radius: 7, opacity: 0.9 }
+  if (score >= 0.40) return { color: '#888888', radius: 5, opacity: 0.9 }
   return null
 }
 

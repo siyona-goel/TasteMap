@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import os
 import re
 from pathlib import Path
@@ -11,8 +12,11 @@ from overpass import tags_to_text
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "300"))
 
 DESCRIPTIONS_CACHE_DIR = Path(__file__).resolve().parent / "cache" / "descriptions"
 ENRICH_MIN_WORDS = 20
@@ -36,7 +40,7 @@ Return ONLY valid JSON with these fields:
 }}
 
 User's answers:
-{answers}
+__USER_ANSWERS__
 """
 
 
@@ -54,7 +58,7 @@ def _chat(prompt: str, *, json_mode: bool = False, max_tokens: int = 800) -> str
         resp = requests.post(
             f"{OLLAMA_BASE_URL}/api/chat",
             json=payload,
-            timeout=120,
+            timeout=OLLAMA_TIMEOUT,
         )
         resp.raise_for_status()
     except requests.RequestException as exc:
@@ -64,28 +68,72 @@ def _chat(prompt: str, *, json_mode: bool = False, max_tokens: int = 800) -> str
         ) from exc
 
     data = resp.json()
-    return data["message"]["content"].strip()
+    content = data.get("message", {}).get("content", "").strip()
+    if not content:
+        raise RuntimeError("Ollama returned an empty response.")
+    return content
 
 
 def _parse_json(raw: str) -> dict:
     text = raw.strip()
     if text.startswith("```"):
-        text = text.split("```", 2)[1]
-        if text.startswith("json"):
-            text = text[4:]
-        text = text.strip()
-    # If the model adds prose around JSON, grab the outermost object.
+        parts = text.split("```")
+        if len(parts) >= 2:
+            text = parts[1]
+            if text.startswith("json"):
+                text = text[4:]
+            text = text.strip()
     if not text.startswith("{"):
         match = re.search(r"\{.*\}", text, re.DOTALL)
         if match:
             text = match.group(0)
+    text = re.sub(r",\s*}", "}", text)
+    text = re.sub(r",\s*]", "]", text)
     return json.loads(text)
 
 
+def _normalize_profile(profile: dict) -> dict:
+    """Ensure required fields exist even when the model omits or renames keys."""
+    normalized = dict(profile)
+    if not normalized.get("summary"):
+        for key, value in profile.items():
+            if key.lower() == "summary" and value:
+                normalized["summary"] = value
+                break
+    if not normalized.get("summary"):
+        vibes = normalized.get("vibes") or []
+        activities = normalized.get("activities") or []
+        avoid = normalized.get("avoid") or []
+        energy = normalized.get("energy", "medium")
+        parts = []
+        if vibes:
+            parts.append(f"Drawn to {', '.join(vibes)} atmospheres.")
+        if activities:
+            parts.append(f"Enjoys {', '.join(activities)}.")
+        if avoid:
+            parts.append(f"Avoids {', '.join(avoid)}.")
+        parts.append(f"Prefers {energy} energy outings.")
+        normalized["summary"] = " ".join(parts) or "Curious urban explorer with varied tastes."
+    return normalized
+
+
 def extract_profile(answers_text: str) -> dict:
-    prompt = PROFILE_PROMPT.format(answers=answers_text)
-    raw = _chat(prompt, json_mode=True)
-    return _parse_json(raw)
+    prompt = PROFILE_PROMPT.replace("__USER_ANSWERS__", answers_text)
+    last_error = None
+
+    for attempt in range(2):
+        try:
+            raw = _chat(prompt, json_mode=True, max_tokens=1200)
+            profile = _normalize_profile(_parse_json(raw))
+            logger.info("Profile extracted on attempt %s", attempt + 1)
+            return profile
+        except (json.JSONDecodeError, ValueError) as exc:
+            last_error = exc
+            logger.warning("Profile JSON parse failed (attempt %s): %s", attempt + 1, exc)
+
+    raise ValueError(
+        f"Could not parse profile JSON from Ollama after 2 attempts: {last_error}"
+    )
 
 
 def enrich_place_description(tags: dict, place_id: int | None = None) -> str:

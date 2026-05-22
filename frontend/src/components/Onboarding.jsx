@@ -37,12 +37,17 @@ export default function Onboarding({ onComplete }) {
         const res = await axios.post(
           `${import.meta.env.VITE_API_URL}/profile`,
           { text },
+          { timeout: 300000 },
         )
         onComplete(res.data)
       } catch (err) {
+        const detail = err.response?.data?.detail
+        const message = Array.isArray(detail)
+          ? detail.map((d) => d.msg || JSON.stringify(d)).join(', ')
+          : detail
         setError(
-          err.response?.data?.detail ||
-            'Could not build your profile. Is the backend running?',
+          message ||
+            'Could not build your profile. Is the backend running with Ollama?',
         )
         setLoading(false)
       }
