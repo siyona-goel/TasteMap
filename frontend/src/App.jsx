@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Onboarding from './components/Onboarding'
-import Map from './components/Map'
+import PlacesMap from './components/Map'
 import CitySearch from './components/CitySearch'
 import axios from 'axios'
 
@@ -73,7 +73,7 @@ export default function App() {
           Scoring places…
         </div>
       )}
-      <Map places={places} center={[city.lat, city.lon]} />
+      <PlacesMap places={places} center={[city.lat, city.lon]} />
     </div>
   )
 }
