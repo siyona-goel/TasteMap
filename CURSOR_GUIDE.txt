@@ -906,45 +906,7 @@ frontend/dist/
 
 
 ================================================================================
-  WHAT TO TALK ABOUT IN INTERVIEWS
-================================================================================
-
-This project has several genuinely interesting technical decisions to discuss:
-
-EMBEDDING SPACE ALIGNMENT
-"I needed the user's taste profile and the place descriptions to be in the
-same semantic vector space so I could compare them directly. I used the same
-sentence transformer model for both, which guarantees they're comparable.
-The challenge was that place descriptions from OSM are sparse tag data —
-I used an LLM enrichment step to convert 'amenity=bar, music=jazz' into
-rich natural language before embedding."
-
-DATA QUALITY AS AN ML PROBLEM
-"The similarity scores were initially noisy because the place descriptions
-were too sparse. This is a classic garbage-in garbage-out problem — improving
-the input representations improved the results more than any model change."
-
-LAZY EVALUATION FOR UX
-"I generate the per-place match reasons lazily — only when the user clicks
-a marker — rather than pre-generating them for all 200 places. This keeps
-the initial load fast and reduces API calls by ~95% for places the user
-never clicks."
-
-CACHING STRATEGY
-"I cache Overpass API responses locally by hashing the lat/lon/radius
-parameters. During development this is essential — you don't want to
-re-query a rate-limited API every code change. In production it also
-dramatically speeds up repeat queries for popular cities."
-
-THE RESUME STORY (keep this short and clear):
-"I built an app that learns your personal taste in places through a short
-conversation, then overlays any city on a map with color-coded markers
-showing which places you'd actually enjoy. The core is semantic similarity
-between a user embedding and place embeddings in a shared vector space."
-
-
-================================================================================
-  OPTIONAL EXTENSIONS (if you have time)
+  OPTIONAL EXTENSIONS
 ================================================================================
 
 - Save/reload taste profiles (localStorage or a simple users table in SQLite)

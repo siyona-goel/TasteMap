@@ -1,6 +1,14 @@
 import { useMemo, useState } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet'
 import axios from 'axios'
+import {
+  getPlaceCategories,
+  PLACE_CATEGORIES,
+} from '../utils/placeCategories'
+
+const CATEGORY_LABELS = Object.fromEntries(
+  PLACE_CATEGORIES.map(({ id, label }) => [id, label]),
+)
 import 'leaflet/dist/leaflet.css'
 
 /** Map a 0–1 relative score (best=1, worst=0 in this batch) to marker style. */
@@ -87,6 +95,16 @@ export default function PlacesMap({ places = [], center = [51.5074, -0.1278] }) 
           >
             <Popup>
               <strong>{place.name}</strong>
+              {getPlaceCategories(place).length > 0 && (
+                <>
+                  <br />
+                  <span style={{ fontSize: '0.85em', opacity: 0.85 }}>
+                    {getPlaceCategories(place)
+                      .map((id) => CATEGORY_LABELS[id] || id)
+                      .join(' · ')}
+                  </span>
+                </>
+              )}
               {scored && (
                 <>
                   <br />

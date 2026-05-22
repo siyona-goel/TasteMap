@@ -1,8 +1,14 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Onboarding from './components/Onboarding'
 import PlacesMap from './components/Map'
 import CitySearch from './components/CitySearch'
+import CategoryFilter from './components/CategoryFilter'
 import axios from 'axios'
+import {
+  filterPlacesByCategory,
+  getPlaceCategories,
+  PLACE_CATEGORIES,
+} from './utils/placeCategories'
 
 const API = import.meta.env.VITE_API_URL
 const DEFAULT_CITY = { lat: 51.5074, lon: -0.1278, name: 'London' }
@@ -12,6 +18,24 @@ export default function App() {
   const [places, setPlaces] = useState([])
   const [city, setCity] = useState(DEFAULT_CITY)
   const [loading, setLoading] = useState(false)
+  const [activeCategories, setActiveCategories] = useState(new Set())
+
+  const filteredPlaces = useMemo(
+    () => filterPlacesByCategory(places, activeCategories),
+    [places, activeCategories],
+  )
+
+  const categoryCounts = useMemo(() => {
+    const counts = Object.fromEntries(
+      PLACE_CATEGORIES.map(({ id }) => [id, 0]),
+    )
+    for (const place of places) {
+      for (const cat of getPlaceCategories(place)) {
+        counts[cat] = (counts[cat] || 0) + 1
+      }
+    }
+    return counts
+  }, [places])
 
   const handleProfileComplete = async (data) => {
     setUserProfile(data)
@@ -35,6 +59,7 @@ export default function App() {
 
   const handleCitySelect = (newCity) => {
     setCity(newCity)
+    setActiveCategories(new Set())
     if (userProfile) {
       loadPlaces(userProfile.embedding, newCity)
     }
@@ -55,6 +80,20 @@ export default function App() {
       >
         <CitySearch onCitySelect={handleCitySelect} />
       </div>
+      <div
+        style={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          zIndex: 1000,
+        }}
+      >
+        <CategoryFilter
+          activeCategories={activeCategories}
+          onChange={setActiveCategories}
+          placeCounts={categoryCounts}
+        />
+      </div>
       {loading && (
         <div
           style={{
@@ -73,7 +112,7 @@ export default function App() {
           Scoring places…
         </div>
       )}
-      <PlacesMap places={places} center={[city.lat, city.lon]} />
+      <PlacesMap places={filteredPlaces} center={[city.lat, city.lon]} />
     </div>
   )
 }
