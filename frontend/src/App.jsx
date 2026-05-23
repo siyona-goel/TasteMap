@@ -9,6 +9,7 @@ import {
   getPlaceCategories,
   PLACE_CATEGORIES,
 } from './utils/placeCategories'
+import { rescorePlaces, stripEmbeddings } from './utils/rescorePlaces'
 
 const API = import.meta.env.VITE_API_URL
 const DEFAULT_CITY = { lat: 51.5074, lon: -0.1278, name: 'London' }
@@ -16,6 +17,7 @@ const DEFAULT_CITY = { lat: 51.5074, lon: -0.1278, name: 'London' }
 export default function App() {
   const [userProfile, setUserProfile] = useState(null)
   const [places, setPlaces] = useState([])
+  const [placesCache, setPlacesCache] = useState([])
   const [city, setCity] = useState(DEFAULT_CITY)
   const [loading, setLoading] = useState(false)
   const [activeCategories, setActiveCategories] = useState(new Set())
@@ -43,6 +45,14 @@ export default function App() {
     await loadPlaces(data.embedding, city)
   }
 
+  const applyScoredPlaces = (scoredWithEmbeddings, embedding) => {
+    setPlacesCache(scoredWithEmbeddings)
+    setPlaces(stripEmbeddings(scoredWithEmbeddings))
+    setUserProfile((prev) =>
+      prev ? { ...prev, embedding } : prev,
+    )
+  }
+
   const loadPlaces = async (embedding, targetCity) => {
     setLoading(true)
     try {
@@ -51,15 +61,21 @@ export default function App() {
         lon: targetCity.lon,
         user_embedding: embedding,
       })
-      setPlaces(res.data)
+      applyScoredPlaces(res.data, embedding)
     } finally {
       setLoading(false)
     }
   }
 
+  const handleFeedback = (newEmbedding) => {
+    const rescored = rescorePlaces(newEmbedding, placesCache)
+    applyScoredPlaces(rescored, newEmbedding)
+  }
+
   const handleCitySelect = (newCity) => {
     setCity(newCity)
     setActiveCategories(new Set())
+    setPlacesCache([])
     if (userProfile) {
       loadPlaces(userProfile.embedding, newCity)
     }
@@ -112,7 +128,12 @@ export default function App() {
           Scoring places…
         </div>
       )}
-      <PlacesMap places={filteredPlaces} center={[city.lat, city.lon]} />
+      <PlacesMap
+        places={filteredPlaces}
+        center={[city.lat, city.lon]}
+        userEmbedding={userProfile.embedding}
+        onFeedback={handleFeedback}
+      />
     </div>
   )
 }

@@ -5,11 +5,14 @@ import {
   getPlaceCategories,
   PLACE_CATEGORIES,
 } from '../utils/placeCategories'
+import 'leaflet/dist/leaflet.css'
+import './Map.css'
+
+const API = import.meta.env.VITE_API_URL
 
 const CATEGORY_LABELS = Object.fromEntries(
   PLACE_CATEGORIES.map(({ id, label }) => [id, label]),
 )
-import 'leaflet/dist/leaflet.css'
 
 /** Map a 0–1 relative score (best=1, worst=0 in this batch) to marker style. */
 function scoreToStyle(relativeScore) {
@@ -39,8 +42,15 @@ function buildRelativeScoreMap(places) {
   return scoreById
 }
 
-export default function PlacesMap({ places = [], center = [51.5074, -0.1278] }) {
+export default function PlacesMap({
+  places = [],
+  center = [51.5074, -0.1278],
+  userEmbedding,
+  onFeedback,
+}) {
   const [reasons, setReasons] = useState({})
+  const [votes, setVotes] = useState({})
+  const [feedbackLoading, setFeedbackLoading] = useState(null)
   const relativeScores = useMemo(() => buildRelativeScoreMap(places), [places])
 
   const fetchReason = async (place) => {
@@ -49,7 +59,7 @@ export default function PlacesMap({ places = [], center = [51.5074, -0.1278] }) 
     if (!profileSummary) return
 
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/reason`, {
+      const res = await axios.post(`${API}/reason`, {
         place_description: place.description,
         profile_summary: profileSummary,
       })
@@ -59,6 +69,29 @@ export default function PlacesMap({ places = [], center = [51.5074, -0.1278] }) 
         ...prev,
         [place.id]: 'Could not load match reason.',
       }))
+    }
+  }
+
+  const submitFeedback = async (place, vote) => {
+    if (!userEmbedding || !onFeedback || feedbackLoading === place.id) return
+
+    setFeedbackLoading(place.id)
+    try {
+      const res = await axios.post(`${API}/feedback`, {
+        user_embedding: userEmbedding,
+        place_description: place.description,
+        vote,
+      })
+      setVotes((prev) => ({ ...prev, [place.id]: vote }))
+      onFeedback(res.data.embedding)
+    } catch {
+      setVotes((prev) => {
+        const next = { ...prev }
+        delete next[place.id]
+        return next
+      })
+    } finally {
+      setFeedbackLoading(null)
     }
   }
 
@@ -113,7 +146,37 @@ export default function PlacesMap({ places = [], center = [51.5074, -0.1278] }) 
                   {reasons[place.id] ? (
                     <em>{reasons[place.id]}</em>
                   ) : (
-                    <span>Click to load match reason...</span>
+                    <span>Click marker to load match reason…</span>
+                  )}
+                  {onFeedback && userEmbedding && (
+                    <div className="popup-feedback">
+                      <button
+                        type="button"
+                        className={`popup-feedback__btn${votes[place.id] === 'thumbs_up' ? ' popup-feedback__btn--active' : ''}`}
+                        disabled={feedbackLoading === place.id}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          submitFeedback(place, 'thumbs_up')
+                        }}
+                        title="More like this"
+                        aria-label="Thumbs up"
+                      >
+                        👍
+                      </button>
+                      <button
+                        type="button"
+                        className={`popup-feedback__btn${votes[place.id] === 'thumbs_down' ? ' popup-feedback__btn--active' : ''}`}
+                        disabled={feedbackLoading === place.id}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          submitFeedback(place, 'thumbs_down')
+                        }}
+                        title="Less like this"
+                        aria-label="Thumbs down"
+                      >
+                        👎
+                      </button>
+                    </div>
                   )}
                 </>
               )}

@@ -1,0 +1,29 @@
+.popup-feedback {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.popup-feedback__btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  background: var(--code-bg, #f4f3ec);
+  border: 1px solid var(--border, #e5e4e7);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.popup-feedback__btn:hover:not(:disabled) {
+  border-color: var(--accent, #aa3bff);
+}
+
+.popup-feedback__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.popup-feedback__btn--active {
+  border-color: var(--accent, #aa3bff);
+  background: var(--accent-bg, rgba(170, 59, 255, 0.1));
+}

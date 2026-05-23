@@ -1,6 +1,8 @@
 import json
 import logging
 
+from typing import Literal
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -8,7 +10,7 @@ from pydantic import BaseModel
 from embeddings import embed, embed_batch
 from llm import extract_profile, generate_match_reason
 from overpass import fetch_places, tags_to_text
-from scoring import score_places
+from scoring import score_places, update_embedding_from_feedback
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -37,6 +39,24 @@ class ScoreRequest(BaseModel):
 class ReasonRequest(BaseModel):
     place_description: str
     profile_summary: str
+
+
+class FeedbackRequest(BaseModel):
+    user_embedding: list[float]
+    place_description: str
+    vote: Literal["thumbs_up", "thumbs_down"]
+
+
+@app.post("/feedback")
+def apply_feedback(req: FeedbackRequest):
+    place_embedding = embed(req.place_description)
+    thumbs_up = req.vote == "thumbs_up"
+    new_embedding = update_embedding_from_feedback(
+        req.user_embedding,
+        place_embedding,
+        thumbs_up,
+    )
+    return {"embedding": new_embedding}
 
 
 @app.post("/reason")
@@ -72,12 +92,7 @@ def score_city(req: ScoreRequest):
     for place, emb in zip(places, embeddings):
         place["embedding"] = emb
 
-    scored = score_places(req.user_embedding, places)
-
-    for place in scored:
-        del place["embedding"]
-
-    return scored
+    return score_places(req.user_embedding, places)
 
 
 @app.post("/profile")
