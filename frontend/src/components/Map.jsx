@@ -146,7 +146,7 @@ export default function PlacesMap({
                   {reasons[place.id] ? (
                     <em>{reasons[place.id]}</em>
                   ) : (
-                    <span>Click marker to load match reason…</span>
+                    <span>Loading match reason…</span>
                   )}
                   {onFeedback && userEmbedding && (
                     <div className="popup-feedback">
