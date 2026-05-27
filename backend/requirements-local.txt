@@ -1,0 +1,4 @@
+# Optional: local ONNX embeddings (EMBEDDING_BACKEND=local)
+-r requirements.txt
+fastembed>=0.4.0,<0.8.0
+onnxruntime>=1.17.0,<1.24

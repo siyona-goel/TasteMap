@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: terroir-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: EMBEDDING_BACKEND
+        value: api
+      - key: EMBEDDING_BATCH_SIZE
+        value: "8"
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: HF_TOKEN
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: OLLAMA_BASE_URL
+        sync: false

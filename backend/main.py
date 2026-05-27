@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 
 from typing import Literal
 
@@ -15,14 +16,27 @@ from scoring import score_places, update_embedding_from_feedback
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+_default_origins = "http://localhost:5173,http://127.0.0.1:5173"
+_cors_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", _default_origins).split(",")
+    if origin.strip()
+]
+
+app = FastAPI(title="Terroir API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=_cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/health")
+def health():
+    """Lightweight probe — no models loaded; Render can bind $PORT immediately."""
+    return {"status": "ok"}
 
 
 class ProfileRequest(BaseModel):

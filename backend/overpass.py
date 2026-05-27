@@ -6,7 +6,7 @@ from pathlib import Path
 import requests
 
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
-USER_AGENT = "TasteMap/1.0 (https://github.com/siyona-goel/TasteMap; dev)"
+USER_AGENT = "Terroir/1.0 (https://github.com/siyona-goel/Terroir; dev)"
 CACHE_DIR = Path(__file__).resolve().parent / "cache"
 
 # These tag categories capture interesting places for a taste profile

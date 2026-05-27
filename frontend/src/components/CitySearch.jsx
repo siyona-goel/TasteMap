@@ -3,7 +3,7 @@ import axios from 'axios'
 import './CitySearch.css'
 
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search'
-const USER_AGENT = 'TasteMap/1.0 (https://github.com/siyona-goel/TasteMap)'
+const USER_AGENT = 'Terroir/1.0 (https://github.com/siyona-goel/Terroir)'
 
 export default function CitySearch({ onCitySelect }) {
   const [query, setQuery] = useState('')
