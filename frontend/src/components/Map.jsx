@@ -5,6 +5,7 @@ import {
   getPlaceCategories,
   PLACE_CATEGORIES,
 } from '../utils/placeCategories'
+import { buildRelativeScoreMap } from '../utils/matchScores'
 import 'leaflet/dist/leaflet.css'
 import './Map.css'
 
@@ -24,34 +25,22 @@ function scoreToStyle(relativeScore) {
 
 const DEFAULT_STYLE = { color: '#888888', radius: 8, opacity: 0.7 }
 
-/** Min–max normalize raw cosine scores within the current city batch. */
-function buildRelativeScoreMap(places) {
-  const scored = (places ?? []).filter((p) => p.score != null)
-  if (scored.length === 0) return new Map()
-
-  const values = scored.map((p) => p.score)
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  const range = max - min
-
-  const scoreById = new Map()
-  for (const place of scored) {
-    const relative = range === 0 ? 1 : (place.score - min) / range
-    scoreById.set(place.id, relative)
-  }
-  return scoreById
-}
-
 export default function PlacesMap({
   places = [],
   center = [51.5074, -0.1278],
   userEmbedding,
   onFeedback,
+  /** Full-batch relative scores so popup % matches the match filter slider. */
+  relativeScores: relativeScoresProp,
 }) {
   const [reasons, setReasons] = useState({})
   const [votes, setVotes] = useState({})
   const [feedbackLoading, setFeedbackLoading] = useState(null)
-  const relativeScores = useMemo(() => buildRelativeScoreMap(places), [places])
+  const relativeScoresFromPlaces = useMemo(
+    () => buildRelativeScoreMap(places),
+    [places],
+  )
+  const relativeScores = relativeScoresProp ?? relativeScoresFromPlaces
 
   const fetchReason = async (place) => {
     if (reasons[place.id]) return

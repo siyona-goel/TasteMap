@@ -1,0 +1,52 @@
+.city-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem 1.5rem;
+  gap: 1rem;
+}
+
+.city-picker__title {
+  margin: 0;
+  font-size: 1.75rem;
+  color: var(--text-h);
+  text-align: center;
+}
+
+.city-picker__subtitle {
+  margin: 0 0 0.5rem;
+  max-width: 28rem;
+  text-align: center;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.city-picker__fallback {
+  margin-top: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--text-h);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.city-picker__fallback:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.city-picker__fallback:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.city-picker__loading {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text);
+}

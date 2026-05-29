@@ -2,29 +2,48 @@ import { useMemo, useState } from 'react'
 import Onboarding from './components/Onboarding'
 import PlacesMap from './components/Map'
 import CitySearch from './components/CitySearch'
+import CityPicker from './components/CityPicker'
 import CategoryFilter from './components/CategoryFilter'
+import MatchFilter from './components/MatchFilter'
 import axios from 'axios'
 import {
   filterPlacesByCategory,
   getPlaceCategories,
   PLACE_CATEGORIES,
 } from './utils/placeCategories'
+import {
+  buildRelativeScoreMap,
+  filterPlacesByMatchPercent,
+} from './utils/matchScores'
 import { rescorePlaces, stripEmbeddings } from './utils/rescorePlaces'
 
 const API = import.meta.env.VITE_API_URL
-const DEFAULT_CITY = { lat: 51.5074, lon: -0.1278, name: 'London' }
 
 export default function App() {
   const [userProfile, setUserProfile] = useState(null)
   const [places, setPlaces] = useState([])
   const [placesCache, setPlacesCache] = useState([])
-  const [city, setCity] = useState(DEFAULT_CITY)
+  // No default city — set only after onboarding city picker or map search
+  const [city, setCity] = useState(null)
   const [loading, setLoading] = useState(false)
   const [activeCategories, setActiveCategories] = useState(new Set())
+  const [minMatchPercent, setMinMatchPercent] = useState(0)
 
-  const filteredPlaces = useMemo(
+  const relativeScores = useMemo(() => buildRelativeScoreMap(places), [places])
+
+  const categoryFilteredPlaces = useMemo(
     () => filterPlacesByCategory(places, activeCategories),
     [places, activeCategories],
+  )
+
+  const filteredPlaces = useMemo(
+    () =>
+      filterPlacesByMatchPercent(
+        categoryFilteredPlaces,
+        minMatchPercent,
+        relativeScores,
+      ),
+    [categoryFilteredPlaces, minMatchPercent, relativeScores],
   )
 
   const categoryCounts = useMemo(() => {
@@ -39,10 +58,10 @@ export default function App() {
     return counts
   }, [places])
 
-  const handleProfileComplete = async (data) => {
+  /** Profile only — city selection and map load happen in handleCitySelect. */
+  const handleProfileComplete = (data) => {
     setUserProfile(data)
     localStorage.setItem('profile_summary', data.profile.summary)
-    await loadPlaces(data.embedding, city)
   }
 
   const applyScoredPlaces = (scoredWithEmbeddings, embedding) => {
@@ -72,16 +91,27 @@ export default function App() {
     applyScoredPlaces(rescored, newEmbedding)
   }
 
+  /** First city after onboarding, or changing city from the map search bar. */
   const handleCitySelect = (newCity) => {
     setCity(newCity)
     setActiveCategories(new Set())
+    setMinMatchPercent(0)
     setPlacesCache([])
     if (userProfile) {
       loadPlaces(userProfile.embedding, newCity)
     }
   }
 
-  if (!userProfile) return <Onboarding onComplete={handleProfileComplete} />
+  if (!userProfile) {
+    return <Onboarding onComplete={handleProfileComplete} />
+  }
+
+  // Taste profile ready — ask for city before showing the map
+  if (!city) {
+    return (
+      <CityPicker onCitySelect={handleCitySelect} loading={loading} />
+    )
+  }
 
   return (
     <div style={{ position: 'relative' }}>
@@ -102,12 +132,21 @@ export default function App() {
           top: 16,
           right: 16,
           zIndex: 1000,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
         }}
       >
         <CategoryFilter
           activeCategories={activeCategories}
           onChange={setActiveCategories}
           placeCounts={categoryCounts}
+        />
+        <MatchFilter
+          minMatchPercent={minMatchPercent}
+          onChange={setMinMatchPercent}
+          visibleCount={filteredPlaces.length}
+          totalCount={places.length}
         />
       </div>
       {loading && (
@@ -133,6 +172,7 @@ export default function App() {
         center={[city.lat, city.lon]}
         userEmbedding={userProfile.embedding}
         onFeedback={handleFeedback}
+        relativeScores={relativeScores}
       />
     </div>
   )
